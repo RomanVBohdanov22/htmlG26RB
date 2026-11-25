@@ -1,98 +1,132 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Experiments & Simulators // RomanVBohdanov22</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-    body {
-      background: #0b1622;
-      color: #e2e8f0;
-      min-height: 100vh;
-      padding: 32px 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container { width: 100%; max-width: 820px; }
-    header {
-      border-bottom: 1px solid #243b53;
-      padding-bottom: 14px;
-      margin-bottom: 24px;
-    }
-    header h1 { font-size: 20px; color: #38bdf8; letter-spacing: 0.6px; }
-    header p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: #102a43;
-      border: 1px solid #2b4c6f;
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .card h2 { font-size: 15px; color: #7dd3fc; }
-    .card p { font-size: 12.5px; color: #cbd5e1; line-height: 1.45; }
-    .tag {
-      display: inline-block;
-      font-family: monospace;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: #163350;
-      color: #38bdf8;
-      border: 1px solid #2b4c6f;
-      margin-bottom: 6px;
-    }
-    a.btn {
-      display: inline-block;
-      text-align: center;
-      text-decoration: none;
-      background: #0284c7;
-      color: #f8fafc;
-      font-weight: bold;
-      font-size: 12.5px;
-      padding: 8px 12px;
-      border-radius: 5px;
-      border: 1px solid #38bdf8;
-    }
-    a.btn:hover { background: #2563eb; }
-    a.btn.secondary { background: #1e3a5f; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>HTML5 CANVAS & JS LAB</h1>
-      <p>Інтерактивні 2D-симулятори, фізичні моделі та вебексперименти</p>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Experiments & Simulators // RomanVBohdanov22</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+      }
+      body {
+        background: #0b1622;
+        color: #e2e8f0;
+        min-height: 100vh;
+        padding: 32px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .container {
+        width: 100%;
+        max-width: 820px;
+      }
+      header {
+        border-bottom: 1px solid #243b53;
+        padding-bottom: 14px;
+        margin-bottom: 24px;
+      }
+      header h1 {
+        font-size: 20px;
+        color: #38bdf8;
+        letter-spacing: 0.6px;
+      }
+      header p {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-top: 4px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: #102a43;
+        border: 1px solid #2b4c6f;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .card h2 {
+        font-size: 15px;
+        color: #7dd3fc;
+      }
+      .card p {
+        font-size: 12.5px;
+        color: #cbd5e1;
+        line-height: 1.45;
+      }
+      .tag {
+        display: inline-block;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #163350;
+        color: #38bdf8;
+        border: 1px solid #2b4c6f;
+        margin-bottom: 6px;
+      }
+      a.btn {
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
+        background: #0284c7;
+        color: #f8fafc;
+        font-weight: bold;
+        font-size: 12.5px;
+        padding: 8px 12px;
+        border-radius: 5px;
+        border: 1px solid #38bdf8;
+      }
+      a.btn:hover {
+        background: #2563eb;
+      }
+      a.btn.secondary {
+        background: #1e3a5f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>HTML5 CANVAS & JS LAB</h1>
+        <p>Р†РЅС‚РµСЂР°РєС‚РёРІРЅС– 2D-СЃРёРјСѓР»СЏС‚РѕСЂРё, С„С–Р·РёС‡РЅС– РјРѕРґРµР»С– С‚Р° РІРµР±РµРєСЃРїРµСЂРёРјРµРЅС‚Рё</p>
+      </header>
 
-    <div class="grid">
-      <div class="card">
-        <div>
-          <span class="tag">ES MODULES // RELEASE</span>
-          <h2>Aqua-Recovery & Salvage (Модульна)</h2>
-          <p>Тактичний 2D-симулятор глибоководних робіт до 50 м із моделлю декомпресії ZHL-16C, парціальними тисками газів та підтримкою спрайтів.</p>
+      <div class="grid">
+        <div class="card">
+          <div>
+            <span class="tag">ES MODULES // RELEASE</span>
+            <h2>Aqua-Recovery & Salvage (РњРѕРґСѓР»СЊРЅР°)</h2>
+            <p>
+              РўР°РєС‚РёС‡РЅРёР№ 2D-СЃРёРјСѓР»СЏС‚РѕСЂ РіР»РёР±РѕРєРѕРІРѕРґРЅРёС… СЂРѕР±С–С‚ РґРѕ 50 Рј С–Р· РјРѕРґРµР»Р»СЋ
+              РґРµРєРѕРјРїСЂРµСЃС–С— ZHL-16C, РїР°СЂС†С–Р°Р»СЊРЅРёРјРё С‚РёСЃРєР°РјРё РіР°Р·С–РІ С‚Р° РїС–РґС‚СЂРёРјРєРѕСЋ
+              СЃРїСЂР°Р№С‚С–РІ.
+            </p>
+          </div>
+          <a class="btn" href="./aqua-recovery/">Р—Р°РїСѓСЃС‚РёС‚Рё СЃРёРјСѓР»СЏС‚РѕСЂ</a>
         </div>
-        <a class="btn" href="./aqua-recovery/">Запустити симулятор</a>
-      </div>
 
-      <div class="card">
-        <div>
-          <span class="tag">SINGLE-FILE // V8</span>
-          <h2>Aqua-Recovery (Прототип v8)</h2>
-          <p>Архівна однофайлова збірка для швидкого тестування базової механіки підйому вантажів, роботи поплавків та контролю зміни.</p>
+        <div class="card">
+          <div>
+            <span class="tag">SINGLE-FILE // V8</span>
+            <h2>Aqua-Recovery (РџСЂРѕС‚РѕС‚РёРї v8)</h2>
+            <p>
+              РђСЂС…С–РІРЅР° РѕРґРЅРѕС„Р°Р№Р»РѕРІР° Р·Р±С–СЂРєР° РґР»СЏ С€РІРёРґРєРѕРіРѕ С‚РµСЃС‚СѓРІР°РЅРЅСЏ Р±Р°Р·РѕРІРѕС—
+              РјРµС…Р°РЅС–РєРё РїС–РґР№РѕРјСѓ РІР°РЅС‚Р°Р¶С–РІ, СЂРѕР±РѕС‚Рё РїРѕРїР»Р°РІРєС–РІ С‚Р° РєРѕРЅС‚СЂРѕР»СЋ Р·РјС–РЅРё.
+            </p>
+          </div>
+          <a class="btn secondary" href="./triple_d26v8.html">Р’С–РґРєСЂРёС‚Рё v8</a>
         </div>
-        <a class="btn secondary" href="./triple_d26v8.html">Відкрити v8</a>
       </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>
