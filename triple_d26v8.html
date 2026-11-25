@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aqua-Recovery & Salvage — Tactical 2D Simulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body { background: #0b1622; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    header {
+      background: #112233; padding: 6px 12px; border-bottom: 1px solid #243b53;
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 13.5px; letter-spacing: 0.7px; color: #38bdf8; }
+    .controls-top { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    button, select {
+      background: #1e3a5f; color: #f8fafc; border: 1px solid #38bdf8;
+      padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11.5px;
+    }
+    button:hover { background: #2563eb; }
+    button.active { background: #0284c7; font-weight: bold; box-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+    button.action-btn { background: #134e4a; border-color: #2dd4bf; }
+    button.action-btn:hover { background: #0f766e; }
+
+    .main-container { display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }
+    .canvas-area { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    canvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: crosshair; }
+
+    .bottom-bar {
+      background: #0d1d2e; border-top: 1px solid #243b53; padding: 4px 12px;
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;
+      font-family: monospace; font-size: 11px; color: #cbd5e1; flex-shrink: 0;
+    }
+    .bottom-bar span b { color: #38bdf8; }
+
+    .hud-panel {
+      width: 340px; min-width: 310px; flex-shrink: 0; background: #102a43; border-left: 1px solid #243b53;
+      padding: 7px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
+    }
+    @media (max-width: 820px) {
+      .main-container { flex-direction: column; }
+      .hud-panel {
+        width: 100%; min-width: 0; height: 42vh; border-left: none; border-top: 1px solid #243b53;
+        flex-direction: row; flex-wrap: wrap; align-content: flex-start;
+      }
+      .card { flex: 1 1 280px; }
+    }
+
+    .card { background: #163350; padding: 7px 9px; border-radius: 6px; border: 1px solid #2b4c6f; }
+    .card h3 { font-size: 11px; text-transform: uppercase; color: #7dd3fc; margin-bottom: 4px; border-bottom: 1px solid #2b4c6f; padding-bottom: 2px; display: flex; justify-content: space-between; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; margin-bottom: 3px; gap: 6px; }
+    .stat-val { font-weight: bold; font-family: monospace; font-size: 12px; }
+    .hud-panel select { max-width: 170px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+    .bar-bg { width: 100%; height: 6px; background: #0b1622; border-radius: 4px; overflow: hidden; margin-top: 2px; }
+    .bar-fill { height: 100%; transition: width 0.2s, background 0.2s; }
+    .alert { color: #f87171; font-weight: bold; font-size: 11px; margin-top: 2px; min-height: 13px; line-height: 1.25; }
+
+    .inv-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; min-height: 22px; }
+    .inv-chip {
+      background: #0f2942; border: 1px solid #38bdf8; border-radius: 4px;
+      padding: 2px 6px; font-size: 10.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .inv-chip:hover { background: #7f1d1d; border-color: #f87171; }
+
+    .radio-log {
+      background: #0b1622; border: 1px solid #243b53; border-radius: 4px;
+      padding: 5px; height: 105px; overflow-y: auto; font-size: 11px; line-height: 1.32;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .radio-msg { border-left: 2px solid #38bdf8; padding-left: 6px; color: #e2e8f0; }
+    .radio-msg.warn { border-left-color: #f87171; color: #fecaca; }
+    .radio-msg.banter { border-left-color: #34d399; color: #a7f3d0; }
+
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(6, 15, 25, 0.72);
+      z-index: 50; justify-content: center; align-items: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .console-modal {
+      background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px;
+      width: 100%; max-width: 530px; padding: 16px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    }
+    .console-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 12px;
+    }
+    .console-header h2 { font-size: 15px; color: #38bdf8; font-family: monospace; }
+    .gauges-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .gauge-box {
+      flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+      padding: 7px; text-align: center; font-family: monospace;
+    }
+    .gauge-box .lbl { font-size: 10px; color: #94a3b8; }
+    .gauge-box .num { font-size: 15px; font-weight: bold; color: #4ade80; margin-top: 2px; }
+    .manifold-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #0f172a; padding: 8px 10px; border-radius: 6px; margin-bottom: 7px;
+      border-left: 4px solid #38bdf8;
+    }
+    .console-footer { display: flex; flex-wrap: wrap; justify-content: space-between; margin-top: 12px; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>AQUA-RECOVERY & SALVAGE // 50M OPS</h1>
+  <div class="controls-top">
+    <button id="btn-jo" class="active" onclick="selectSingleDiver('jo')">Джо (J-01)</button>
+    <button id="btn-rudy" onclick="selectSingleDiver('rudy')">Руді (R-02)</button>
+    <button id="btn-klovi" onclick="selectSingleDiver('klovi')">Клові (K-03)</button>
+    <button id="btn-all" onclick="selectAllDivers()" title="Виділити всіх (Ctrl+A)">[Всі]</button>
+    <button class="action-btn" onclick="triggerGrabOrDrop()" title="Клавіша E">[E] Взяти / Покласти</button>
+    <button class="action-btn" onclick="attachLiftBag()" title="Клавіша B">[B] Поплавок</button>
+    <button id="btn-lights" onclick="cycleLights()" title="Клавіша L">[L] Ліхтарі: Авто</button>
+    <button onclick="startRadioCheck(true)" title="Клавіша R">[R] Перекличка</button>
+    <button id="btn-pause" onclick="togglePause()">Пауза</button>
+  </div>
+</header>
+
+<div class="main-container">
+  <div class="canvas-area">
+    <canvas id="simCanvas"></canvas>
+    <div class="bottom-bar">
+      <span id="bot-cursor">Курсор: <b>—</b></span>
+      <span id="bot-selected">Виділено: <b>Джо (J-01)</b></span>
+      <span id="bot-mod">Безпечно (O₂/N₂): <b>28.0 м</b></span>
+      <span id="bot-mission">На платформах: <b>0 / 7</b></span>
+    </div>
+  </div>
+
+  <aside class="hud-panel">
+    <div class="card">
+      <h3><span id="diver-title">Джозефіна (J-01)</span><span id="group-badge" style="color:#38bdf8;"></span></h3>
+      <div class="stat-row"><span>Глибина / Тиск:</span><span class="stat-val" id="val-depth">24.0 м / 3.40 бар</span></div>
+      <div class="stat-row"><span>Парц. O₂ / N₂:</span><span class="stat-val" id="val-gases">0.71 / 2.69 бар</span></div>
+      <div class="stat-row"><span>Стан:</span><span class="stat-val" id="val-state" style="color:#4ade80;">Норма</span></div>
+      <div class="stat-row"><span>Зовнішній буксир:</span><span class="stat-val" id="val-tow">Немає</span></div>
+      <div class="stat-row"><span>Інвентар (вага):</span><span class="stat-val" id="val-weight">0.0 / 10.0 кг</span></div>
+      <div class="inv-list" id="inv-list"></div>
+      <div class="alert" id="gas-alert"></div>
+    </div>
+
+    <div class="card">
+      <h3>Магістраль та Робоча Зміна</h3>
+      <div class="stat-row">
+        <span>Суміш <span id="mix-scope-lbl">(активн.)</span>:</span>
+        <select id="gas-mix" onchange="requestMixChangeForSelected(this.value)">
+          <option value="air">Air (21% O₂ / 79% N₂)</option>
+          <option value="ean32">Nitrox EAN32 (32% O₂)</option>
+          <option value="tx1845">Trimix 18/45 (He 45%)</option>
+        </select>
+      </div>
+      <div class="stat-row" id="purge-row" style="display:none;">
+        <span>Продувка шланга:</span><span class="stat-val" id="val-purge" style="color:#f59e0b;">5.0 с</span>
+      </div>
+      <div class="stat-row">
+        <span>Ліміт зміни / місії:</span>
+        <select id="shift-limit" onchange="resetShiftTimer()">
+          <option value="480" selected>8 год (Робочий день)</option>
+          <option value="30">30 хв (Занурення)</option>
+          <option value="12">12 хв (Тест таймера)</option>
+          <option value="0">Без обмеження</option>
+        </select>
+      </div>
+      <div class="stat-row"><span>Годинник зміни:</span><span class="stat-val" id="val-shift-clock">08:00 (залиш. 480 хв)</span></div>
+      <div class="stat-row"><span>Підйом+Деко / Донний час:</span><span class="stat-val" id="val-bottom-left">3 хв / 477 хв</span></div>
+      <div class="stat-row">
+        <span>Течія:</span>
+        <button id="btn-current" onclick="toggleCurrent()" style="padding:2px 8px;">Вимкнена</button>
+        <button onclick="openConsoleModal()" style="padding:2px 8px;">Пульт консолі</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Декомпресія (ZHL-16C)</h3>
+      <div class="stat-row"><span>Насичення N₂:</span><span class="stat-val" id="val-tissue">0%</span></div>
+      <div class="bar-bg"><div id="bar-tissue" class="bar-fill" style="width: 0%; background: #38bdf8;"></div></div>
+      <div class="stat-row" style="margin-top: 4px;"><span>Стеля спливання:</span><span class="stat-val" id="val-ceiling">0.0 м</span></div>
+      <div class="stat-row"><span>Швидкість часу:</span>
+        <select id="time-scale">
+          <option value="1">1x (Реальний)</option>
+          <option value="10" selected>10x (Тест)</option>
+          <option value="30">30x (Швидко)</option>
+          <option value="60">60x (Прискорено)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Радіожурнал ефіру (Comms)</h3>
+      <div class="radio-log" id="radio-log"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Спливаюче вікно настінної консолі -->
+<div class="modal-backdrop" id="console-modal" onclick="if(event.target===this) closeConsoleModal()">
+  <div class="console-modal">
+    <div class="console-header">
+      <h2>WALL LIFE-SUPPORT CONSOLE // 50M</h2>
+      <button onclick="closeConsoleModal()">✕ Закрити</button>
+    </div>
+    <div class="gauges-row">
+      <div class="gauge-box"><div class="lbl">ТИСК МАГІСТРАЛІ</div><div class="num">6.0 BAR</div></div>
+      <div class="gauge-box"><div class="lbl">ГЛИБИНА ВУЗЛА</div><div class="num" style="color:#38bdf8;">50.0 M</div></div>
+      <div class="gauge-box"><div class="lbl">ПІДІГРІВ КОСТЮМІВ</div><div class="num" style="color:#f59e0b;">+28.5 °C</div></div>
+    </div>
+
+    <div id="console-manifolds"></div>
+
+    <div class="console-footer">
+      <button onclick="resetDecompression()" style="background:#0f766e; border-color:#2dd4bf;">Декомпресія (Скинути N₂)</button>
+      <button onclick="respawnItems()" style="background:#334155;">Оновити вантажі</button>
+      <button onclick="closeConsoleModal()">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+const TANK_WIDTH_M = 60;
+const TANK_MAX_DEPTH = 50;
+const SURFACE_Y = 48;
+
+let paused = false;
+let bubbles = [];
+const keys = {};
+const mouse = { x: 0, y: 0, inside: false, down: false, startX: 0, startY: 0, isDragging: false };
+
+let lightMode = 'auto';
+let currentEnabled = false;
+let currentVx = 0.35;
+
+const MIXES = {
+  air: { key: 'air', name: 'Air', o2: 0.21, n2: 0.79, he: 0.0 },
+  ean32: { key: 'ean32', name: 'EAN32', o2: 0.32, n2: 0.68, he: 0.0 },
+  tx1845: { key: 'tx1845', name: 'Trimix 18/45', o2: 0.18, n2: 0.37, he: 0.45 }
+};
+
+const world = {
+  divers: [],
+  npcs: [],
+  critters: [],
+  platforms: [
+    { id: 'plat-surf', name: 'Поверхневий понтон', x: 5, y: 1.8, w: 12 },
+    { id: 'plat-mid', name: 'Платформа 26м', x: 9, y: 26.0, w: 10 },
+    { id: 'plat-deep', name: 'Донний стенд 46м', x: 33, y: 46.0, w: 12 }
+  ],
+  items: [],
+  consolePos: { x: 54, y: 35 }
+};
+
+const missionStats = {
+  emergenciesCount: 0,
+  rescuesPerformed: 0,
+  usedHelium: false,
+  hasDivedDeep: false,
+  debriefTriggered: false,
+  shiftElapsedMin: 0,
+  shiftRecallTriggered: false
+};
+
+let dialogueQueue = [];
+let radioCheckTimer = 0;
+let activeRadioCheck = null;
+let globalCritterChatterCooldown = 6;
+
+const CRITTER_LINES = {
+  jelly: [
+    'Класна медуза, але я не буду її чіпати без рукавичок.',
+    'Обережно, поруч медуза дрейфує — гарно світиться у товщі води.',
+    'Медуза просто під шлангом пропливла, добре що магістраль армована.',
+    'Яка граційна медуза, головне не зачепити її щупальцями.'
+  ],
+  fishLight: [
+    'О, я вже котру хвилину відганяю тих рибок, щоб вони у мій ліхтар на шоломі не тикалися!',
+    'Ця дрібнота прямо в промінь ліхтаря лізе, хоч сачок бери!',
+    'Ану киш від ліхтаря, малеча — засліпите самі себе!'
+  ],
+  fishGeneral: [
+    'Тут рибка крутиться. Мабуть думає, що можна поцупити щось смачненьке.',
+    'Цікава рибка підпливла роздивитися мій карабін.',
+    'Місцеві рибки зовсім не бояться бульбашок з регулятора.'
+  ]
+};
+
+function createDiver(cfg) {
+  return {
+    id: cfg.id,
+    shortName: cfg.shortName,
+    name: cfg.name,
+    role: cfg.role || 'diver',
+    x: cfg.x, y: cfg.y,
+    targetX: cfg.x, targetY: cfg.y,
+    vx: 0, vy: 0, facing: 1,
+    speed: cfg.speed || 4.2,
+    baseRmv: cfg.baseRmv || 17,
+    maxCarryWeight: cfg.maxCarryWeight || 10.0,
+    suitColor: cfg.suitColor,
+    trimColor: cfg.trimColor,
+    furColor: cfg.furColor,
+    eyeColor: cfg.eyeColor,
+    hoseColor: cfg.hoseColor,
+    tailType: cfg.tailType,
+    tissueN2: 0.79,
+    mixKey: 'air',
+    mix: { ...MIXES.air },
+    pendingMix: null,
+    purgeTimer: 0,
+    status: 'ok',
+    speech: '',
+    speechTimer: 0,
+    ceilingDepth: 0,
+    idleTimer: 0,
+    manualOverrideTimer: 0,
+    towingDiverIds: [],
+    towedBy: null,
+    towingContainerId: null,
+    inventory: [],
+    warnedDeepNitrox: false,
+    rescueCooldown: 0,
+    mixWarnCooldown: 0,
+    critterCooldown: 0,
+    shiftRecallActive: false
+  };
+}
+
+world.divers = [
+  createDiver({
+    id: 'jo', shortName: 'Джо', name: 'Джозефіна (J-01) — Координаторка', role: 'coordinator',
+    x: 22, y: 24, speed: 4.2, baseRmv: 17, maxCarryWeight: 10.0,
+    suitColor: '#e2e8f0', trimColor: '#334155', furColor: '#f8fafc', eyeColor: '#22c55e',
+    hoseColor: '#38bdf8', tailType: 'wolf'
+  }),
+  createDiver({
+    id: 'rudy', shortName: 'Руді', name: 'Рудольфіна (R-02) — Інженерка ROV', role: 'engineer',
+    x: 36, y: 27, speed: 3.9, baseRmv: 19, maxCarryWeight: 12.0,
+    suitColor: '#5c4033', trimColor: '#d6d3d1', furColor: '#4a3222', eyeColor: '#f59e0b',
+    hoseColor: '#eab308', tailType: 'wolf'
+  }),
+  createDiver({
+    id: 'klovi', shortName: 'Клові', name: 'Кловіанна (K-03) — Рятувальниця-медикиня', role: 'medic',
+    x: 15, y: 15, speed: 4.7, baseRmv: 14, maxCarryWeight: 10.0,
+    suitColor: '#7dd3fc', trimColor: '#f97316', furColor: '#f59e0b', eyeColor: '#78350f',
+    hoseColor: '#fb923c', tailType: 'panda'
+  })
+];
+
+function spawnCritters() {
+  world.critters = [
+    { id: 'cr1', kind: 'jelly', x: 12, y: 36, vx: 0.35, vy: 0.1, color: '#38bdf8', phase: 0 },
+    { id: 'cr2', kind: 'jelly', x: 43, y: 39, vx: -0.28, vy: -0.08, color: '#c084fc', phase: 2.1 },
+    { id: 'cr3', kind: 'fish', x: 24, y: 19, vx: 0.65, vy: 0, color: '#2dd4bf', phase: 1.0 },
+    { id: 'cr4', kind: 'fish', x: 31, y: 21, vx: -0.6, vy: 0, color: '#34d399', phase: 1.5 },
+    { id: 'cr5', kind: 'fish', x: 19, y: 33, vx: 0.55, vy: 0, color: '#38bdf8', phase: 2.7 }
+  ];
+}
+
+let selectedIds = new Set(['jo']);
+
+function getDiver(id) {
+  return world.divers.find(d => d.id === id);
+}
+
+function getPrimarySelectedDiver() {
+  const firstId = Array.from(selectedIds)[0] || world.divers[0].id;
+  return getDiver(firstId) || world.divers[0];
+}
+
+function isDiverLightOn(d) {
+  return lightMode === 'on' || (lightMode === 'auto' && d.y >= 30);
+}
+
+function updateSelectionUI() {
+  world.divers.forEach(d => {
+    const btn = document.getElementById('btn-' + d.id);
+    if (btn) btn.classList.toggle('active', selectedIds.has(d.id));
+  });
+  const btnAll = document.getElementById('btn-all');
+  if (btnAll) btnAll.classList.toggle('active', selectedIds.size === world.divers.length);
+
+  const names = Array.from(selectedIds).map(id => getDiver(id)?.shortName).filter(Boolean);
+  document.getElementById('bot-selected').innerHTML = `Виділено: <b>${names.join(', ')}</b>`;
+  document.getElementById('mix-scope-lbl').textContent = selectedIds.size > 1 ? `(всім: ${selectedIds.size})` : '(активн.)';
+
+  const primary = getPrimarySelectedDiver();
+  document.getElementById('gas-mix').value = primary.pendingMix ? primary.pendingMix.key : primary.mixKey;
+}
+
+function selectSingleDiver(id) {
+  selectedIds = new Set([id]);
+  updateSelectionUI();
+}
+
+function selectAllDivers() {
+  selectedIds = new Set(world.divers.map(d => d.id));
+  updateSelectionUI();
+}
+
+function respawnItems() {
+  const colors = ['#f59e0b', '#ec4899', '#10b981', '#a855f7', '#06b6d4'];
+  const rndCol = () => colors[Math.floor(Math.random() * colors.length)];
+  world.items = [
+    { id: 'c1', type: 'container', label: 'Контейнер Альфа', weight: 35, x: 18, y: 49.0, color: rndCol(), hasLiftBag: false, carriedBy: null, onPlatform: null, spotted: false },
+    { id: 'c2', type: 'container', label: 'Контейнер Бета', weight: 35, x: 28, y: 49.0, color: rndCol(), hasLiftBag: false, carriedBy: null, onPlatform: null, spotted: false },
+    { id: 'c3', type: 'container', label: 'Контейнер Гамма', weight: 35, x: 47, y: 49.0, color: rndCol(), hasLiftBag: false, carriedBy: null, onPlatform: null, spotted: false },
+    { id: 's1', type: 'small', label: 'Акустичний маяк', weight: 2.5, x: 12.5, y: 25.3, color: '#38bdf8', carriedBy: null, onPlatform: null, spotted: false },
+    { id: 's2', type: 'small', label: 'Чорна скринька', weight: 3.5, x: 24, y: 49.2, color: '#f97316', carriedBy: null, onPlatform: null, spotted: false },
+    { id: 's3', type: 'small', label: 'Блок телеметрії', weight: 3.0, x: 41, y: 45.3, color: '#4ade80', carriedBy: null, onPlatform: null, spotted: false },
+    { id: 's4', type: 'small', label: 'Зонд-аналізатор', weight: 2.0, x: 26, y: 49.2, color: '#e879f9', carriedBy: null, onPlatform: null, spotted: false }
+  ];
+  world.divers.forEach(d => {
+    d.inventory = [];
+    d.towingContainerId = null;
+  });
+  logRadio('Система', 'На об’єкті розміщено нові контейнери та прилади для підйому.');
+}
+
+function logRadio(speaker, text, type = 'normal') {
+  const logEl = document.getElementById('radio-log');
+  const div = document.createElement('div');
+  div.className = 'radio-msg' + (type === 'warn' ? ' warn' : type === 'banter' ? ' banter' : '');
+  div.innerHTML = `<strong>${speaker}:</strong> ${text}`;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  while (logEl.children.length > 40) logEl.removeChild(logEl.firstChild);
+}
+
+function say(diverId, text, duration = 4.5, logType = 'normal') {
+  const d = getDiver(diverId);
+  if (!d) return;
+  d.speech = text;
+  d.speechTimer = duration;
+  logRadio(d.shortName, text, logType);
+}
+
+function queueDialogue(delaySec, diverId, text, duration = 4.5, logType = 'banter') {
+  dialogueQueue.push({ timer: delaySec, diverId, text, duration, logType });
+}
+
+function resize() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function mToPxX(m) { return (m / TANK_WIDTH_M) * canvas.width; }
+function mToPxY(m) {
+  return SURFACE_Y + (m / TANK_MAX_DEPTH) * (canvas.height - SURFACE_Y - 18);
+}
+function pxToMX(px) { return Math.max(2, Math.min(TANK_WIDTH_M - 3, (px / canvas.width) * TANK_WIDTH_M)); }
+function pxToMY(px) {
+  const m = ((px - SURFACE_Y) / (canvas.height - SURFACE_Y - 18)) * TANK_MAX_DEPTH;
+  return Math.max(0.5, Math.min(TANK_MAX_DEPTH - 0.8, m));
+}
+
+function getMaxSafeGasDepth(mix) {
+  const maxO2Depth = ((1.35 / mix.o2) - 1.0) * 10;
+  const maxN2Depth = ((3.0 / mix.n2) - 1.0) * 10;
+  return Math.max(2.0, Math.min(maxO2Depth, maxN2Depth));
+}
+
+function getSafeDepthFor(d) {
+  const maxGas = getMaxSafeGasDepth(d.mix);
+  const minDeco = d.ceilingDepth > 0.5 ? Math.min(TANK_MAX_DEPTH - 2, d.ceilingDepth + 1.5) : 0;
+  return Math.max(minDeco, Math.min(maxGas, d.y));
+}
+
+function getInventoryWeight(d) {
+  return d.inventory.reduce((sum, it) => sum + it.weight, 0);
+}
+
+function dropExternalContainer(d, silent = false) {
+  if (!d.towingContainerId) return;
+  const item = world.items.find(it => it.id === d.towingContainerId);
+  d.towingContainerId = null;
+  if (!item) return;
+
+  item.carriedBy = null;
+  const plat = world.platforms.find(p => Math.abs(d.y - p.y) < 3.4 && d.x >= p.x - 1.2 && d.x <= p.x + p.w + 1.2);
+  if (plat) {
+    item.y = plat.y - 0.8;
+    item.onPlatform = plat.id;
+    if (!silent) say(d.id, `Розмістила ${item.label} на "${plat.name}".`, 3.5);
+  } else {
+    item.onPlatform = null;
+    if (!silent) say(d.id, `Відчепила ${item.label} — він опускається на дно.`, 3);
+  }
+}
+
+function dropInventoryItem(itemId) {
+  const d = getPrimarySelectedDiver();
+  const idx = d.inventory.findIndex(it => it.id === itemId);
+  if (idx === -1) return;
+  const [it] = d.inventory.splice(idx, 1);
+  it.carriedBy = null;
+  it.x = d.x;
+  it.y = d.y + 0.5;
+  const plat = world.platforms.find(p => Math.abs(d.y - p.y) < 3.4 && d.x >= p.x - 1.2 && d.x <= p.x + p.w + 1.2);
+  if (plat) {
+    it.y = plat.y - 0.6;
+    it.onPlatform = plat.id;
+    say(d.id, `Виклала ${it.label} на "${plat.name}".`, 3);
+  } else {
+    it.onPlatform = null;
+    say(d.id, `Випустила ${it.label} — опускається вниз.`, 2.8);
+  }
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.inside = true;
+  if (mouse.down && Math.hypot(mouse.x - mouse.startX, mouse.y - mouse.startY) > 8) {
+    mouse.isDragging = true;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mouse.inside = false;
+  mouse.down = false;
+  mouse.isDragging = false;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  const cx = mToPxX(world.consolePos.x);
+  const cy = mToPxY(world.consolePos.y);
+  if (Math.abs(clickX - cx) < 32 && Math.abs(clickY - cy) < 52) {
+    openConsoleModal();
+    return;
+  }
+
+  mouse.down = true;
+  mouse.startX = clickX;
+  mouse.startY = clickY;
+  mouse.isDragging = false;
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (e.button !== 0 || !mouse.down) return;
+  const rect = canvas.getBoundingClientRect();
+  const upX = e.clientX - rect.left;
+  const upY = e.clientY - rect.top;
+
+  if (mouse.isDragging) {
+    const minX = Math.min(mouse.startX, upX);
+    const maxX = Math.max(mouse.startX, upX);
+    const minY = Math.min(mouse.startY, upY);
+    const maxY = Math.max(mouse.startY, upY);
+
+    const boxed = world.divers.filter(d => {
+      const px = mToPxX(d.x);
+      const py = mToPxY(d.y);
+      return px >= minX && px <= maxX && py >= minY && py <= maxY;
+    });
+
+    if (boxed.length > 0) {
+      selectedIds = new Set(boxed.map(d => d.id));
+      updateSelectionUI();
+    }
+  } else {
+    const baseTX = pxToMX(upX);
+    const baseTY = pxToMY(upY);
+    const selList = Array.from(selectedIds).map(id => getDiver(id)).filter(Boolean);
+
+    selList.forEach((d, idx) => {
+      if (d.towedBy) return;
+      const spread = (idx - (selList.length - 1) / 2) * 2.4;
+      d.targetX = Math.max(2, Math.min(TANK_WIDTH_M - 3, baseTX + spread));
+      d.targetY = baseTY;
+      d.idleTimer = 0;
+      d.manualOverrideTimer = 2.5;
+      d.shiftRecallActive = false;
+    });
+  }
+
+  mouse.down = false;
+  mouse.isDragging = false;
+});
+
+window.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  if (e.code === 'Escape') closeConsoleModal();
+  if (e.code === 'KeyE') triggerGrabOrDrop();
+  if (e.code === 'KeyB') attachLiftBag();
+  if (e.code === 'KeyL') cycleLights();
+  if (e.code === 'KeyR') startRadioCheck(true);
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
+    e.preventDefault();
+    selectAllDivers();
+  }
+});
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('btn-pause').textContent = paused ? 'Продовжити' : 'Пауза';
+}
+
+function cycleLights() {
+  const btn = document.getElementById('btn-lights');
+  if (lightMode === 'auto') { lightMode = 'on'; btn.textContent = '[L] Ліхтарі: Увімк'; }
+  else if (lightMode === 'on') { lightMode = 'off'; btn.textContent = '[L] Ліхтарі: Вимк'; }
+  else { lightMode = 'auto'; btn.textContent = '[L] Ліхтарі: Авто'; }
+}
+
+function toggleCurrent() {
+  currentEnabled = !currentEnabled;
+  const btn = document.getElementById('btn-current');
+  btn.textContent = currentEnabled ? 'Слабка (0.35 м/с)' : 'Вимкнена';
+  btn.style.borderColor = currentEnabled ? '#f59e0b' : '#38bdf8';
+}
+
+function resetShiftTimer() {
+  missionStats.shiftElapsedMin = 0;
+  missionStats.shiftRecallTriggered = false;
+  world.divers.forEach(d => { d.shiftRecallActive = false; });
+}
+
+function requestMixChange(diverId, val) {
+  const d = getDiver(diverId);
+  const newMix = MIXES[val];
+  if (!d || !newMix || (d.mixKey === val && !d.pendingMix)) return;
+
+  d.pendingMix = { ...newMix };
+  d.purgeTimer = 5.0;
+  d.warnedDeepNitrox = false;
+
+  const modSelect = document.getElementById('mod-mix-' + diverId);
+  if (modSelect) modSelect.value = val;
+
+  logRadio('Пульт', `Подано ${newMix.name} у лінію ${d.id.toUpperCase()}. Продувка магістралі (5 с)...`);
+}
+
+function requestMixChangeForSelected(val) {
+  selectedIds.forEach(id => requestMixChange(id, val));
+}
+
+function openConsoleModal() {
+  const container = document.getElementById('console-manifolds');
+  container.innerHTML = '';
+  world.divers.forEach(d => {
+    const curVal = d.pendingMix ? d.pendingMix.key : d.mixKey;
+    const row = document.createElement('div');
+    row.className = 'manifold-row';
+    row.style.borderLeftColor = d.hoseColor;
+    row.innerHTML = `
+      <div><strong>${d.name}</strong><br>
+      <span style="font-size:11px; color:#94a3b8;">Глибина: ${d.y.toFixed(1)} м | Стеля: ${d.ceilingDepth.toFixed(1)} м</span></div>
+      <select id="mod-mix-${d.id}" onchange="requestMixChange('${d.id}', this.value)">
+        <option value="air" ${curVal === 'air' ? 'selected' : ''}>Air (21% O₂)</option>
+        <option value="ean32" ${curVal === 'ean32' ? 'selected' : ''}>Nitrox EAN32 (32% O₂)</option>
+        <option value="tx1845" ${curVal === 'tx1845' ? 'selected' : ''}>Trimix 18/45 (He 45%)</option>
+      </select>
+    `;
+    container.appendChild(row);
+  });
+  document.getElementById('console-modal').classList.add('open');
+}
+
+function closeConsoleModal() {
+  document.getElementById('console-modal').classList.remove('open');
+}
+
+function resetDecompression() {
+  world.divers.forEach(d => { d.tissueN2 = 0.79; });
+  logRadio('Барокамера', 'Цикл декомпресії завершено. Тканини очищено від надлишку N₂.');
+  closeConsoleModal();
+}
+
+function unloadInventoryToPlatform(d, plat) {
+  const count = d.inventory.length;
+  while (d.inventory.length > 0) {
+    const smallIt = d.inventory.pop();
+    smallIt.carriedBy = null;
+    smallIt.x = plat.x + 1.5 + Math.random() * (plat.w - 3);
+    smallIt.y = plat.y - 0.6;
+    smallIt.onPlatform = plat.id;
+  }
+  say(d.id, `Виклала прилади (${count} шт.) на "${plat.name}".`, 3.5);
+}
+
+function triggerGrabOrDrop() {
+  const selDivers = Array.from(selectedIds).map(id => getDiver(id)).filter(Boolean);
+  const primary = getPrimarySelectedDiver();
+
+  // 1. Якщо хтось із виділених буксирує важкий контейнер — відпускаємо / ставимо на платформу
+  const carrierDiver = selDivers.find(d => d.towingContainerId);
+  if (carrierDiver) {
+    dropExternalContainer(carrierDiver, false);
+    return;
+  }
+
+  // 2. Якщо виділена героїня перебуває біля Поверхневого понтона і має предмети в інвентарі — вивантажуємо їх туди
+  for (const d of selDivers) {
+    if (d.inventory.length === 0) continue;
+    const surfPlat = world.platforms.find(p =>
+      p.id === 'plat-surf' &&
+      Math.abs(d.y - p.y) < 3.4 &&
+      d.x >= p.x - 1.2 && d.x <= p.x + p.w + 1.2
+    );
+    if (surfPlat) {
+      unloadInventoryToPlatform(d, surfPlat);
+      return;
+    }
+  }
+
+  // 3. ПРІОРИТЕТ ПІДБИРАННЯ: шукаємо будь-який вільний (!carriedBy) предмет поруч (навіть якщо він лежить на проміжній платформі!)
+  const freeItems = world.items.filter(it => !it.carriedBy);
+  let bestPair = null;
+
+  for (const d of selDivers) {
+    for (const it of freeItems) {
+      const dist = Math.hypot(it.x - d.x, it.y - d.y);
+      if (dist <= 4.6) {
+        if (!bestPair || dist < bestPair.dist) {
+          bestPair = { diver: d, item: it, dist };
+        }
+      }
+    }
+  }
+
+  if (bestPair) {
+    const { diver: d, item: nearItem } = bestPair;
+    if (nearItem.type === 'small') {
+      let picker = d;
+      if (getInventoryWeight(picker) + nearItem.weight > picker.maxCarryWeight) {
+        const altPicker = selDivers.find(other =>
+          Math.hypot(nearItem.x - other.x, nearItem.y - other.y) <= 4.8 &&
+          getInventoryWeight(other) + nearItem.weight <= other.maxCarryWeight
+        );
+        if (altPicker) picker = altPicker;
+      }
+
+      const curW = getInventoryWeight(picker);
+      if (curW + nearItem.weight > picker.maxCarryWeight) {
+        say(picker.id, `Занадто важко для інвентарю (${(curW + nearItem.weight).toFixed(1)}/${picker.maxCarryWeight} кг)!`, 3.5, 'warn');
+        return;
+      }
+
+      nearItem.carriedBy = picker.id;
+      nearItem.onPlatform = null;
+      picker.inventory.push(nearItem);
+      const newW = getInventoryWeight(picker);
+      say(picker.id, `Взяла в інвентар: ${nearItem.label} (${picker.inventory.length} шт., ${newW.toFixed(1)}/${picker.maxCarryWeight} кг).`, 3.2);
+    } else {
+      const hadBag = nearItem.hasLiftBag;
+      nearItem.hasLiftBag = false;
+      nearItem.carriedBy = d.id;
+      nearItem.onPlatform = null;
+      d.towingContainerId = nearItem.id;
+      if (hadBag) {
+        say(d.id, `Зняла поплавок і взяла ${nearItem.label} на зовнішній буксир!`, 3.5);
+      } else {
+        say(d.id, `Зачепила важкий ${nearItem.label} (${nearItem.weight} кг) на буксир.`, 3.5);
+      }
+    }
+    return;
+  }
+
+  // 4. Якщо поруч немає вільних предметів, але є будь-яка платформа і прилади в кишенях — викладаємо на неї
+  for (const d of selDivers) {
+    if (d.inventory.length === 0) continue;
+    const nearPlat = world.platforms.find(p => Math.abs(d.y - p.y) < 3.4 && d.x >= p.x - 1.2 && d.x <= p.x + p.w + 1.2);
+    if (nearPlat) {
+      unloadInventoryToPlatform(d, nearPlat);
+      return;
+    }
+  }
+
+  // 5. Ручний буксир напарниці
+  if (primary.towingDiverIds.length > 0) {
+    const rId = primary.towingDiverIds.pop();
+    const mate = getDiver(rId);
+    if (mate) {
+      mate.towedBy = null;
+      say(primary.id, `Відпускаю буксир ${mate.shortName}.`, 3);
+    }
+    return;
+  }
+
+  const nearMate = world.divers.find(m => m.id !== primary.id && !m.towedBy && Math.hypot(m.x - primary.x, m.y - primary.y) < 3.8);
+  if (nearMate) {
+    primary.towingDiverIds.push(nearMate.id);
+    nearMate.towedBy = primary.id;
+    say(primary.id, `Взяла ${nearMate.shortName} на буксир!`, 3.5);
+  }
+}
+
+function attachLiftBag() {
+  const selDivers = Array.from(selectedIds).map(id => getDiver(id)).filter(Boolean);
+  const primary = getPrimarySelectedDiver();
+
+  for (const d of selDivers) {
+    const container = world.items.find(it =>
+      it.type === 'container' && !it.hasLiftBag &&
+      (it.carriedBy === d.id || Math.hypot(it.x - d.x, it.y - d.y) < 4.2)
+    );
+    if (container) {
+      if (d.towingContainerId === container.id) d.towingContainerId = null;
+      container.carriedBy = null;
+      container.onPlatform = null;
+      container.hasLiftBag = true;
+      say(d.id, `Піддула мішок-поплавок на ${container.label} — пішов нагору!`, 4);
+      return;
+    }
+  }
+  say(primary.id, 'Поруч немає контейнера без мішка-поплавка.', 2.5);
+}
+
+function startRadioCheck(manual = false) {
+  if (activeRadioCheck) return;
+  radioCheckTimer = 0;
+
+  const coord = getDiver('jo');
+  const caller = (coord && coord.status === 'ok') ? coord : world.divers.find(d => d.status === 'ok') || world.divers[0];
+  const respondents = world.divers
+    .filter(d => d.id !== caller.id)
+    .sort(() => Math.random() - 0.5);
+
+  say(caller.id, `${caller.shortName} викликає групу! Як мене чуєте?`, 4);
+
+  activeRadioCheck = {
+    callerId: caller.id,
+    respondents: respondents.map(r => r.id),
+    step: 0,
+    timer: 2.2,
+    missingReported: []
+  };
+}
+
+function triggerSurfaceDebrief() {
+  missionStats.debriefTriggered = true;
+  let t = 1.5;
+
+  if (missionStats.rescuesPerformed > 0) {
+    queueDialogue(t, 'jo', 'Фух, ми на поверхні. Дякую за оперативний порятунок під водою!', 4.5);
+    t += 4.2;
+    queueDialogue(t, 'klovi', 'Завжди напоготові. Головне, що всі в нормі і без баротравм.', 4.5);
+    t += 4.2;
+  }
+
+  if (missionStats.emergenciesCount >= 2) {
+    queueDialogue(t, 'jo', 'Наступного разу треба буде уважніше віднестися до плану місії...', 4.8, 'warn');
+    t += 4.5;
+  }
+
+  if (missionStats.usedHelium && getDiver('jo')?.mixKey === 'air' && getDiver('rudy')?.mixKey === 'air') {
+    queueDialogue(t, 'rudy', 'Ха, після гелієвого трімаксу так приємно знову почути ваші звичайні голоси!', 5.0);
+    t += 4.8;
+  }
+
+  const day = new Date().getDay();
+  const dayLines = {
+    1: { id: 'jo', text: 'Не такий вже важкий понеділок. Принаймні до обіду)' },
+    2: { id: 'rudy', text: 'Вівторок. Деякі зараз парсять код, а ми підбираємо зі дна те, що їх код вронив).' },
+    3: { id: 'klovi', text: 'Середа. Чи не час для стендапу?' },
+    4: { id: 'jo', text: 'Четвер. Три дні працювали, і тут попрацюємо. Сьогодні ясний день наверху...' },
+    5: { id: 'rudy', text: "П'ятниця. Ще ближче до кінця контрактних робіт)" },
+    6: { id: 'klovi', text: 'Субота, а ми в басейні — зате без черг на пірсі!' },
+    0: { id: 'jo', text: 'Недільний тренувальний спуск перед новим робочим тижнем.' }
+  };
+  const dLine = dayLines[day];
+  queueDialogue(t, dLine.id, dLine.text, 5.0);
+  t += 4.8;
+
+  queueDialogue(t, 'klovi', 'Що ж, дівчата, забіжимо зараз на каву?', 4.2);
+  t += 3.8;
+  queueDialogue(t, 'rudy', 'Так, сьогодні знову піца!', 4.5);
+}
+
+function estimateAscentAndDecoMinutes(d) {
+  const travelMin = d.y / 9.0;
+  const decoStopMin = d.ceilingDepth > 0.3 ? Math.max(2.0, (d.tissueN2 - 0.85) * 9.0) : 0;
+  return travelMin + decoStopMin;
+}
+
+function drawHexGrid() {
+  const r = 34;
+  const dx = r * 1.5;
+  const dy = r * Math.sqrt(3);
+  ctx.strokeStyle = 'rgba(125, 211, 252, 0.11)';
+  ctx.lineWidth = 1.5;
+
+  for (let col = 0; col * dx < canvas.width + r; col++) {
+    for (let row = 0; row * dy < canvas.height + r; row++) {
+      const cx = col * dx;
+      const cy = row * dy + (col % 2 === 1 ? dy / 2 : 0) + SURFACE_Y;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+}
+
+function drawCritters(time) {
+  world.critters.forEach(c => {
+    const px = mToPxX(c.x);
+    const py = mToPxY(c.y);
+    ctx.save();
+    ctx.translate(px, py);
+    if (c.kind === 'jelly') {
+      const pulse = Math.sin(time * 3 + c.phase) * 2;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.strokeStyle = c.color;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7.5 + pulse * 0.4, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      for (let i = -4; i <= 4; i += 4) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + Math.sin(time * 4 + i) * 2.2, 11);
+        ctx.stroke();
+      }
+    } else {
+      const dir = c.vx >= 0 ? 1 : -1;
+      ctx.scale(dir, 1);
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.5, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-6.5, 0); ctx.lineTo(-10.5, -3.5); ctx.lineTo(-10.5, 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(3.5, -0.8, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
+function drawPlatforms() {
+  world.platforms.forEach(p => {
+    const px = mToPxX(p.x);
+    const py = mToPxY(p.y);
+    const pw = mToPxX(p.w);
+
+    ctx.fillStyle = '#334155';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(px, py, pw, 8);
+    ctx.strokeRect(px, py, pw, 8);
+
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(px + 6, py + 8); ctx.lineTo(px + 6, py + 22);
+    ctx.moveTo(px + pw - 6, py + 8); ctx.lineTo(px + pw - 6, py + 22);
+    ctx.stroke();
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, px + pw / 2, py + 19);
+  });
+}
+
+function drawSalvageItems() {
+  world.items.forEach(it => {
+    if (it.carriedBy && it.type === 'small') return;
+    const px = mToPxX(it.x);
+    const py = mToPxY(it.y);
+
+    if (it.type === 'container') {
+      if (it.hasLiftBag) {
+        ctx.fillStyle = '#f97316';
+        ctx.strokeStyle = '#fed7aa';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px, py - 14);
+        ctx.quadraticCurveTo(px - 14, py - 34, px, py - 42);
+        ctx.quadraticCurveTo(px + 14, py - 34, px, py - 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.beginPath(); ctx.moveTo(px, py - 14); ctx.lineTo(px, py - 8); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px - 5, py - 11, 10, 5);
+
+      ctx.fillStyle = it.color;
+      ctx.beginPath();
+      ctx.moveTo(px, py - 7);
+      ctx.lineTo(px + 11, py + 3);
+      ctx.lineTo(px, py + 13);
+      ctx.lineTo(px - 11, py + 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = it.color;
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(px - 6, py - 4, 12, 8);
+      ctx.strokeRect(px - 6, py - 4, 12, 8);
+    }
+  });
+}
+
+function drawConsole() {
+  const cx = mToPxX(world.consolePos.x);
+  const cy = mToPxY(world.consolePos.y);
+
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx, SURFACE_Y); ctx.lineTo(cx, cy - 45);
+  ctx.moveTo(cx, cy + 45); ctx.lineTo(cx, canvas.height);
+  ctx.stroke();
+
+  ctx.fillStyle = '#334155';
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.fillRect(cx - 24, cy - 45, 48, 90);
+  ctx.strokeRect(cx - 24, cy - 45, 48, 90);
+
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(cx - 17, cy - 36, 34, 22);
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('50.0m', cx, cy - 26);
+  ctx.fillText('6.0BAR', cx, cy - 17);
+
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath(); ctx.arc(cx - 8, cy + 5, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#eab308';
+  ctx.beginPath(); ctx.arc(cx + 8, cy + 5, 3, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('ПУЛЬТ [КЛІК]', cx, cy + 58);
+}
+
+function drawUmbilical(d) {
+  const startX = mToPxX(world.consolePos.x) - 10;
+  const startY = mToPxY(world.consolePos.y) + 25;
+  const endX = mToPxX(d.x);
+  const endY = mToPxY(d.y) + 6;
+
+  const ctrlX = (startX + endX) / 2;
+  const ctrlY = Math.max(startY, endY) + 45;
+
+  ctx.strokeStyle = d.hoseColor;
+  ctx.lineWidth = 3.2;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+  ctx.stroke();
+}
+
+function drawDiver(d, time) {
+  const px = mToPxX(d.x);
+  const py = mToPxY(d.y);
+  const isSelected = selectedIds.has(d.id);
+  const swimWave = Math.sin(time * (d.status === 'oxtox' ? 14 : 5) + (d.id === 'rudy' ? 2 : 0)) * 4;
+
+  const lightOn = isDiverLightOn(d);
+  if (lightOn) {
+    ctx.save();
+    ctx.translate(px + d.facing * 12, py - 16);
+    if (d.facing < 0) ctx.scale(-1, 1);
+    const beamGrad = ctx.createLinearGradient(0, 0, 150, 0);
+    beamGrad.addColorStop(0, 'rgba(254, 249, 195, 0.42)');
+    beamGrad.addColorStop(1, 'rgba(254, 249, 195, 0.0)');
+    ctx.fillStyle = beamGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(150, -34);
+    ctx.lineTo(150, 34);
+    ctx.lineTo(0, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if (isSelected) {
+    const tx = mToPxX(d.targetX);
+    const ty = mToPxY(d.targetY);
+    if (Math.hypot(tx - px, ty - py) > 8) {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(px, py, 33, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  if (d.status !== 'ok') {
+    const pulse = 36 + Math.sin(time * 10) * 4;
+    ctx.strokeStyle = d.status === 'narcosis' ? '#c084fc' : '#ef4444';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(px, py, pulse, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.scale(d.facing, 1);
+
+  ctx.fillStyle = d.suitColor;
+  ctx.strokeStyle = d.trimColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-10, 4);
+  ctx.quadraticCurveTo(-34, -4 + swimWave, -44, 6 - swimWave);
+  ctx.quadraticCurveTo(-32, 16 + swimWave, -10, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  if (d.tailType === 'panda') {
+    ctx.strokeStyle = '#f97316';
+    ctx.beginPath(); ctx.moveTo(-26, 2); ctx.lineTo(-26, 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-35, 3); ctx.lineTo(-35, 11); ctx.stroke();
+  }
+
+  ctx.fillStyle = d.suitColor;
+  ctx.fillRect(-14, 12, 10, 14);
+  ctx.fillStyle = d.trimColor;
+  ctx.beginPath();
+  ctx.moveTo(-16, 26);
+  ctx.lineTo(-26, 36 + swimWave);
+  ctx.lineTo(-8, 36 - swimWave);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = d.suitColor;
+  ctx.strokeStyle = d.trimColor;
+  ctx.beginPath();
+  ctx.roundRect(-10, -8, 22, 24, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#eab308';
+  ctx.fillRect(-15, -5, 6, 16);
+
+  ctx.fillStyle = d.status === 'ok'
+    ? 'rgba(186, 230, 253, 0.35)'
+    : d.status === 'narcosis'
+      ? 'rgba(192, 132, 252, 0.45)'
+      : 'rgba(248, 113, 113, 0.5)';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(3, -16, 13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = d.furColor;
+  ctx.beginPath();
+  ctx.moveTo(-2, -26); ctx.lineTo(-4, -36); ctx.lineTo(3, -28);
+  ctx.moveTo(4, -26); ctx.lineTo(6, -36); ctx.lineTo(10, -27);
+  ctx.fill();
+
+  ctx.fillStyle = d.furColor;
+  ctx.beginPath(); ctx.arc(4, -15, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = d.eyeColor;
+  ctx.beginPath(); ctx.arc(8, -17, 2, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(d.id.toUpperCase(), px, py - 41);
+
+  if (d.speech) {
+    ctx.font = 'bold 11px sans-serif';
+    const textW = ctx.measureText(d.speech).width + 14;
+    const clampedX = Math.max(textW / 2 + 8, Math.min(canvas.width - textW / 2 - 8, px));
+    const yLift = d.towedBy ? (d.id === 'jo' ? 24 : 46) : 0;
+    const boxY = Math.max(SURFACE_Y + 4, py - 67 - yLift);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.strokeStyle = d.status === 'ok' ? '#38bdf8' : '#f87171';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(clampedX - textW / 2, boxY, textW, 20, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = d.status === 'ok' ? '#bae6fd' : '#fca5a5';
+    ctx.fillText(d.speech, clampedX, boxY + 14);
+  }
+}
+
+function drawCursorAndSelection() {
+  const activeDiver = getPrimarySelectedDiver();
+  const safeGasDepth = getMaxSafeGasDepth(activeDiver.mix);
+
+  if (activeDiver.ceilingDepth > 0.5) {
+    const ceilY = mToPxY(activeDiver.ceilingDepth);
+    ctx.strokeStyle = 'rgba(248, 113, 113, 0.8)';
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, ceilY); ctx.lineTo(canvas.width, ceilY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`СТЕЛЯ ДЕКОМПРЕСІЇ: ${activeDiver.ceilingDepth.toFixed(1)} м`, 65, ceilY - 5);
+  }
+
+  if (mouse.down && mouse.isDragging) {
+    const rx = Math.min(mouse.startX, mouse.x);
+    const ry = Math.min(mouse.startY, mouse.y);
+    const rw = Math.abs(mouse.x - mouse.startX);
+    const rh = Math.abs(mouse.y - mouse.startY);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 3]);
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.setLineDash([]);
+    return;
+  }
+
+  if (!mouse.inside || mouse.y < SURFACE_Y) return;
+
+  const cursorDepth = pxToMY(mouse.y);
+  const cursorPabs = 1.0 + 0.1 * cursorDepth;
+  const isUnsafe = cursorDepth > safeGasDepth || (activeDiver.ceilingDepth > 0.5 && cursorDepth < activeDiver.ceilingDepth);
+
+  ctx.strokeStyle = isUnsafe ? 'rgba(248, 113, 113, 0.45)' : 'rgba(56, 189, 248, 0.35)';
+  ctx.setLineDash([3, 4]);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, mouse.y); ctx.lineTo(canvas.width, mouse.y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const label = `${cursorDepth.toFixed(1)} м (${cursorPabs.toFixed(2)} бар)`;
+  ctx.font = 'bold 11px monospace';
+  const boxW = ctx.measureText(label).width + 14;
+  const boxH = 22;
+  const offsetX = (mouse.x + boxW + 18 > canvas.width) ? -(boxW + 12) : 14;
+  const offsetY = (mouse.y - boxH - 8 < SURFACE_Y) ? 14 : -(boxH + 6);
+
+  const bx = mouse.x + offsetX;
+  const by = mouse.y + offsetY;
+
+  ctx.fillStyle = 'rgba(11, 22, 34, 0.9)';
+  ctx.strokeStyle = isUnsafe ? '#f87171' : '#38bdf8';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 4); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = isUnsafe ? '#fca5a5' : '#e0f2fe';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, bx + 7, by + 15);
+}
+
+function update(dt, nowSec) {
+  if (paused) return;
+  const timeScale = parseFloat(document.getElementById('time-scale').value);
+  const simMinutes = (dt * timeScale) / 60;
+  missionStats.shiftElapsedMin += simMinutes;
+  if (globalCritterChatterCooldown > 0) globalCritterChatterCooldown -= dt;
+
+  // 1. Черга діалогів
+  for (let i = dialogueQueue.length - 1; i >= 0; i--) {
+    dialogueQueue[i].timer -= dt;
+    if (dialogueQueue[i].timer <= 0) {
+      const q = dialogueQueue.splice(i, 1)[0];
+      say(q.diverId, q.text, q.duration, q.logType);
+    }
+  }
+
+  // 2. Автоматична радіоперекличка
+  radioCheckTimer += dt;
+  if (radioCheckTimer >= 180 && !activeRadioCheck) {
+    startRadioCheck(false);
+  }
+
+  if (activeRadioCheck) {
+    activeRadioCheck.timer -= dt;
+    if (activeRadioCheck.timer <= 0) {
+      if (activeRadioCheck.step < activeRadioCheck.respondents.length) {
+        const respId = activeRadioCheck.respondents[activeRadioCheck.step];
+        const resp = getDiver(respId);
+        const caller = getDiver(activeRadioCheck.callerId);
+        if (resp && resp.status === 'ok') {
+          say(resp.id, `Так, ${caller.shortName}, я ${resp.shortName}. Чую тебе добре!`, 3.5);
+        } else if (resp) {
+          activeRadioCheck.missingReported.push(resp.shortName);
+        }
+        activeRadioCheck.step++;
+        activeRadioCheck.timer = 2.2;
+      } else {
+        if (activeRadioCheck.missingReported.length > 0) {
+          const names = activeRadioCheck.missingReported.join(' та ');
+          say(activeRadioCheck.callerId, `Не чую відповіді від ${names}... Тривога!`, 4.5, 'warn');
+        }
+        activeRadioCheck = null;
+      }
+    }
+  }
+
+  // 3. Контроль ліміту робочої зміни та безпечного підйому
+  const shiftLimitMin = parseFloat(document.getElementById('shift-limit').value);
+  if (shiftLimitMin > 0) {
+    const remainingShiftMin = shiftLimitMin - missionStats.shiftElapsedMin;
+    const coord = getDiver('jo');
+
+    world.divers.forEach(d => {
+      if (d.y > 4.0 && d.status === 'ok') {
+        const ascentNeeded = estimateAscentAndDecoMinutes(d);
+        const bottomLeft = remainingShiftMin - ascentNeeded;
+
+        if (bottomLeft <= 1.0 && !d.shiftRecallActive) {
+          d.shiftRecallActive = true;
+          if (d.id === 'jo') {
+            say('jo', 'Час зміни наближається до кінця — починаю плановий підйом з декомпресією!', 4.8, 'warn');
+          } else if (coord && coord.status === 'ok') {
+            say('jo', `${d.shortName}, донний час вичерпано з урахуванням деко! Спускаюся, піднімаємося разом!`, 5.0, 'warn');
+          }
+        }
+
+        if (d.shiftRecallActive && d.manualOverrideTimer <= 0) {
+          dropExternalContainer(d, true);
+          const safeAscentTarget = d.ceilingDepth > 0.4 ? d.ceilingDepth + 0.8 : 1.5;
+          d.targetY = safeAscentTarget;
+
+          if (d.id !== 'jo' && coord && coord.status === 'ok' && coord.manualOverrideTimer <= 0) {
+            if (Math.hypot(coord.x - d.x, coord.y - d.y) > 4.0 && d.y > 12) {
+              coord.targetX = d.x - 2.2;
+              coord.targetY = d.y;
+            } else {
+              coord.targetY = safeAscentTarget;
+            }
+          }
+        }
+      } else if (d.y <= 3.0) {
+        d.shiftRecallActive = false;
+      }
+    });
+  }
+
+  // 4. Взаємний порятунок
+  const severity = { oxtox: 3, deco: 2, narcosis: 1, ok: 0 };
+  const distressed = world.divers
+    .filter(d => d.status !== 'ok')
+    .sort((a, b) => severity[b.status] - severity[a.status]);
+
+  if (distressed.length > 0 && !activeRadioCheck) {
+    const healthy = world.divers
+      .filter(d => d.status === 'ok')
+      .sort((a, b) => Math.hypot(a.x - distressed[0].x, a.y - distressed[0].y) - Math.hypot(b.x - distressed[0].x, b.y - distressed[0].y));
+
+    const primaryRescuer = healthy.find(h => h.id === 'klovi') || healthy[0];
+    const secondaryRescuer = healthy.find(h => h.id !== primaryRescuer?.id);
+
+    if (primaryRescuer) {
+      dropExternalContainer(primaryRescuer, false);
+
+      const nextUnattached = distressed.find(v => !v.towedBy);
+      const deepestVictimY = Math.max(...distressed.map(v => v.y));
+      const rescuerMaxDepth = getMaxSafeGasDepth(primaryRescuer.mix);
+
+      if (deepestVictimY > rescuerMaxDepth + 1.5 && primaryRescuer.mixWarnCooldown <= 0) {
+        say(primaryRescuer.id, `Глибина ${deepestVictimY.toFixed(0)} м завелика для моєї ${primaryRescuer.mix.name}! Потрібен Trimix!`, 4.5, 'warn');
+        primaryRescuer.mixWarnCooldown = 14;
+      }
+
+      if (nextUnattached) {
+        const dist = Math.hypot(primaryRescuer.x - nextUnattached.x, primaryRescuer.y - nextUnattached.y);
+        if (dist > 2.3) {
+          if (primaryRescuer.manualOverrideTimer <= 0) {
+            primaryRescuer.targetX = nextUnattached.x - 1.4;
+            primaryRescuer.targetY = nextUnattached.y;
+          }
+          if (primaryRescuer.rescueCooldown <= 0) {
+            const msg = distressed.length > 1
+              ? `Обидві в зоні ризику! Йду за ${nextUnattached.shortName}, тримайтеся!`
+              : `Тримайся, ${nextUnattached.shortName}, йду на перехоплення!`;
+            say(primaryRescuer.id, msg, 3.8, 'warn');
+            primaryRescuer.rescueCooldown = 10;
+          }
+        } else {
+          nextUnattached.towedBy = primaryRescuer.id;
+          if (!primaryRescuer.towingDiverIds.includes(nextUnattached.id)) {
+            primaryRescuer.towingDiverIds.push(nextUnattached.id);
+          }
+          missionStats.rescuesPerformed++;
+
+          const stillNeedsPickup = distressed.find(v => !v.towedBy);
+          if (stillNeedsPickup) {
+            say(primaryRescuer.id, `Підхопила ${nextUnattached.shortName}! Тепер швидко за ${stillNeedsPickup.shortName}!`, 4.0, 'warn');
+          } else {
+            const safeDepth = Math.min(...distressed.map(v => getSafeDepthFor(v)));
+            const names = distressed.map(v => v.shortName).join(' та ');
+            say(primaryRescuer.id, `Забрала ${names}! Піднімаю на ${safeDepth.toFixed(0)} м (безпечно для суміші)!`, 4.5, 'warn');
+          }
+        }
+      } else {
+        const safeDepth = Math.min(...distressed.map(v => getSafeDepthFor(v)));
+        if (primaryRescuer.manualOverrideTimer <= 0) {
+          primaryRescuer.targetY = Math.max(1.5, safeDepth - 0.5);
+        }
+      }
+
+      if (secondaryRescuer && secondaryRescuer.manualOverrideTimer <= 0) {
+        dropExternalContainer(secondaryRescuer, true);
+        const leadVictim = distressed[0];
+        secondaryRescuer.targetX = leadVictim.x + 3.4;
+        secondaryRescuer.targetY = getSafeDepthFor(leadVictim);
+      }
+    }
+  } else {
+    world.divers.forEach(d => {
+      const rescuedList = d.towingDiverIds.filter(id => getDiver(id)?.status === 'ok');
+      if (rescuedList.length > 0) {
+        rescuedList.forEach(rId => {
+          const mate = getDiver(rId);
+          if (mate) mate.towedBy = null;
+          d.towingDiverIds = d.towingDiverIds.filter(id => id !== rId);
+        });
+        const names = rescuedList.map(rId => getDiver(rId)?.shortName).filter(Boolean).join(' та ');
+        say(d.id, `${names} у безпечній зоні! Продуйте магістралі відповідною сумішшю.`, 4.5);
+      }
+    });
+  }
+
+  // 5. Оновлення кожної героїні та реакції на кріттерів
+  world.divers.forEach(d => {
+    if (d.speechTimer > 0) {
+      d.speechTimer -= dt;
+      if (d.speechTimer <= 0) d.speech = '';
+    }
+    if (d.rescueCooldown > 0) d.rescueCooldown -= dt;
+    if (d.mixWarnCooldown > 0) d.mixWarnCooldown -= dt;
+    if (d.critterCooldown > 0) d.critterCooldown -= dt;
+    if (d.manualOverrideTimer > 0) d.manualOverrideTimer -= dt;
+
+    if (d.pendingMix) {
+      d.purgeTimer -= dt;
+      if (d.purgeTimer <= 0) {
+        d.mix = { ...d.pendingMix };
+        d.mixKey = d.pendingMix.key;
+        d.pendingMix = null;
+        if (d.mix.he > 0) missionStats.usedHelium = true;
+        logRadio(d.shortName, `Магістраль продуто, дихаю ${d.mix.name}.`);
+      }
+    }
+
+    const pAbs = 1.0 + 0.1 * d.y;
+    const pO2 = pAbs * d.mix.o2;
+    const pN2 = pAbs * d.mix.n2;
+    const pInspiredN2 = (pAbs - 0.0627) * d.mix.n2;
+
+    if (d.y > 18) missionStats.hasDivedDeep = true;
+
+    if (d.id === 'klovi' && d.mixKey === 'ean32' && d.y > 30 && !d.warnedDeepNitrox) {
+      d.warnedDeepNitrox = true;
+      say('klovi', 'У мене в магістралі найтрокс! Мені краще не спускатися занадто глибоко.', 4.5, 'warn');
+    }
+
+    const k = 1 - Math.pow(2, -simMinutes / 20.0);
+    d.tissueN2 += (pInspiredN2 - d.tissueN2) * k;
+
+    const ceilingBar = Math.max(1.0, (d.tissueN2 - 0.45) * 0.85);
+    d.ceilingDepth = Math.max(0, (ceilingBar - 1.0) * 10);
+
+    const prevStatus = d.status;
+    if (pO2 > 1.6) {
+      d.status = 'oxtox';
+      if (!d.speech) d.speech = 'КРИТИЧНИЙ P_O₂! Судоми!';
+    } else if (d.ceilingDepth > 0.5 && d.y < d.ceilingDepth) {
+      d.status = 'deco';
+      if (!d.speech) d.speech = `Стоп! Стеля ${d.ceilingDepth.toFixed(1)} м!`;
+    } else if (pO2 > 1.4) {
+      d.status = 'oxtox';
+      if (!d.speech) d.speech = 'Високий O₂ — треба вище!';
+    } else if (pN2 > 3.2) {
+      d.status = 'narcosis';
+      if (!d.speech) d.speech = 'Азотний наркоз...';
+    } else {
+      d.status = 'ok';
+    }
+
+    if (d.status !== 'ok') {
+      dropExternalContainer(d, true);
+    }
+
+    if (prevStatus === 'ok' && d.status !== 'ok') {
+      missionStats.emergenciesCount++;
+      logRadio(d.shortName, `Увага! Зафіксовано стан: ${d.status.toUpperCase()} на глибині ${d.y.toFixed(1)} м!`, 'warn');
+    }
+
+    if (d.status === 'ok' && !d.speech && d.critterCooldown <= 0 && globalCritterChatterCooldown <= 0 && distressed.length === 0) {
+      const nearCritter = world.critters.find(c => Math.hypot(c.x - d.x, c.y - d.y) < 5.0);
+      if (nearCritter) {
+        let pool;
+        if (nearCritter.kind === 'jelly') {
+          pool = CRITTER_LINES.jelly;
+        } else if (isDiverLightOn(d)) {
+          pool = CRITTER_LINES.fishLight;
+          nearCritter.vx = (nearCritter.x >= d.x ? 1 : -1) * 1.1;
+        } else {
+          pool = CRITTER_LINES.fishGeneral;
+        }
+        const line = pool[Math.floor(Math.random() * pool.length)];
+        say(d.id, line, 4.8, 'banter');
+        d.critterCooldown = 28;
+        globalCritterChatterCooldown = 14;
+      }
+    }
+
+    if (selectedIds.has(d.id) && !d.towedBy) {
+      let manualX = 0, manualY = 0;
+      if (keys['ArrowLeft'] || keys['KeyA']) manualX -= 1;
+      if (keys['ArrowRight'] || keys['KeyD']) manualX += 1;
+      if (keys['ArrowUp'] || keys['KeyW']) manualY -= 1;
+      if (keys['ArrowDown'] || keys['KeyS']) manualY += 1;
+
+      if (manualX !== 0 || manualY !== 0) {
+        d.targetX = Math.max(2, Math.min(TANK_WIDTH_M - 3, d.x + manualX * 2));
+        d.targetY = Math.max(0.5, Math.min(TANK_MAX_DEPTH - 0.8, d.y + manualY * 2));
+        d.idleTimer = 0;
+        d.manualOverrideTimer = 2.0;
+        d.shiftRecallActive = false;
+      }
+    }
+
+    if (d.towedBy && getDiver(d.towedBy)) {
+      const rescuer = getDiver(d.towedBy);
+      const slotIndex = Math.max(0, rescuer.towingDiverIds.indexOf(d.id));
+      const sideOffset = slotIndex === 0 ? -1.4 : 1.4;
+      d.x = Math.max(2, Math.min(TANK_WIDTH_M - 3, rescuer.x + sideOffset));
+      d.y = rescuer.y + 0.2;
+      d.targetX = d.x;
+      d.targetY = d.y;
+    } else {
+      let speedMult = 1.0;
+      if (pO2 > 1.6) speedMult = 0.05;
+      else if (d.status === 'deco' || d.status === 'oxtox') speedMult = 0.45;
+      else if (d.status === 'narcosis') speedMult = 0.7;
+
+      const invRatio = getInventoryWeight(d) / d.maxCarryWeight;
+      speedMult *= (1.0 - invRatio * 0.22);
+      if (d.towingContainerId) speedMult *= 0.62;
+      if (d.towingDiverIds.length === 1) speedMult *= 0.68;
+      else if (d.towingDiverIds.length >= 2) speedMult *= 0.52;
+
+      const dx = d.targetX - d.x;
+      const dy = d.targetY - d.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 0.25) {
+        d.idleTimer = 0;
+        const wobbleX = d.status === 'narcosis' ? Math.sin(nowSec * 3) * 1.4 : 0;
+        const wobbleY = d.status === 'narcosis' ? Math.cos(nowSec * 2.5) * 1.2 : 0;
+        d.vx = ((dx / dist) * d.speed * speedMult) + wobbleX;
+        d.vy = ((dy / dist) * d.speed * speedMult) + wobbleY;
+        if (Math.abs(d.vx) > 0.15) d.facing = d.vx < 0 ? -1 : 1;
+
+        world.items.forEach(it => {
+          if (!it.spotted && !it.carriedBy && !it.onPlatform && Math.hypot(it.x - d.x, it.y - d.y) < 4.5) {
+            it.spotted = true;
+            say(d.id, `Бачу об'єкт: ${it.label} (${it.y.toFixed(0)} м)!`, 3.5);
+          }
+        });
+      } else {
+        d.vx *= 0.82;
+        d.vy *= 0.82;
+        d.idleTimer += dt;
+
+        if (d.idleTimer > 15) {
+          const cycle = (d.idleTimer - 15) % 16;
+          if (cycle < 4) d.facing = -1;
+          else if (cycle < 8) d.facing = 1;
+          else if (cycle < 12) {
+            const others = world.divers
+              .filter(o => o.id !== d.id)
+              .sort((a, b) => Math.hypot(a.x - d.x, a.y - d.y) - Math.hypot(b.x - d.x, b.y - d.y));
+            if (others[0]) d.facing = others[0].x < d.x ? -1 : 1;
+          } else {
+            const others = world.divers
+              .filter(o => o.id !== d.id)
+              .sort((a, b) => Math.hypot(a.x - d.x, a.y - d.y) - Math.hypot(b.x - d.x, b.y - d.y));
+            if (others[1]) d.facing = others[1].x < d.x ? -1 : 1;
+          }
+        }
+      }
+
+      const driftX = currentEnabled ? currentVx : 0;
+      d.x = Math.max(2, Math.min(TANK_WIDTH_M - 3, d.x + (d.vx + driftX) * dt));
+      d.y = Math.max(0.5, Math.min(TANK_MAX_DEPTH - 0.8, d.y + d.vy * dt));
+    }
+
+    const bubbleChance = (d.status === 'ok' && !d.towingContainerId && d.towingDiverIds.length === 0) ? 0.16 : 0.45;
+    if (Math.random() < bubbleChance) {
+      bubbles.push({
+        x: mToPxX(d.x) + (Math.random() * 10 - 5),
+        y: mToPxY(d.y) - 24,
+        r: 2 + Math.random() * 2.5,
+        vy: 38 + Math.random() * 25
+      });
+    }
+  });
+
+  // 6. Фізика вантажів
+  world.items.forEach(it => {
+    if (it.carriedBy && getDiver(it.carriedBy)) {
+      const carrier = getDiver(it.carriedBy);
+      it.x = carrier.x - carrier.facing * 1.6;
+      it.y = carrier.y + 1.2;
+      it.onPlatform = null;
+    } else if (it.hasLiftBag && it.y > 1.2) {
+      it.y = Math.max(1.2, it.y - 2.6 * dt);
+      if (it.y <= 1.3 && !it.surfacedNotified) {
+        it.surfacedNotified = true;
+        logRadio('Поверхня', `${it.label} сплив на мішку-поплавку — підберіть [E] і перетягніть на понтон!`);
+      }
+    } else if (!it.onPlatform && !it.hasLiftBag) {
+      const floorY = TANK_MAX_DEPTH - (it.type === 'container' ? 1.0 : 0.8);
+      if (it.y < floorY) {
+        const prevY = it.y;
+        it.y = Math.min(floorY, it.y + (it.type === 'container' ? 2.4 : 1.5) * dt);
+
+        const landedPlat = world.platforms.find(p =>
+          it.x >= p.x && it.x <= p.x + p.w &&
+          prevY <= p.y - 0.5 && it.y >= p.y - 0.7
+        );
+        if (landedPlat) {
+          it.y = landedPlat.y - (it.type === 'container' ? 0.8 : 0.6);
+          it.onPlatform = landedPlat.id;
+        }
+      }
+    }
+  });
+
+  // 7. Рух підводних кріттерів
+  world.critters.forEach(c => {
+    if (c.kind === 'fish') {
+      const litDiver = world.divers.find(d => isDiverLightOn(d) && Math.hypot(d.x - c.x, d.y - c.y) < 8.5);
+      if (litDiver) {
+        const beamX = litDiver.x + litDiver.facing * 3.2;
+        const beamY = litDiver.y - 0.8 + Math.sin(nowSec * 3.5 + c.phase) * 0.9;
+        c.vx += (beamX - c.x) * 0.45 * dt;
+        c.vx = Math.max(-1.1, Math.min(1.1, c.vx));
+        c.y += (beamY - c.y) * 1.4 * dt;
+      } else {
+        c.vx = Math.sign(c.vx || 1) * 0.6;
+        c.y += Math.sin(nowSec * 1.5 + c.phase) * 0.15 * dt;
+      }
+    } else {
+      c.y += Math.sin(nowSec * 1.2 + c.phase) * 0.18 * dt;
+    }
+
+    c.x += c.vx * dt;
+    if (c.x < 4 || c.x > TANK_WIDTH_M - 6) c.vx *= -1;
+    c.y = Math.max(3, Math.min(TANK_MAX_DEPTH - 2, c.y));
+  });
+
+  if (missionStats.hasDivedDeep && !missionStats.debriefTriggered) {
+    const allAtSurface = world.divers.every(d => d.y <= 2.2 && d.status === 'ok');
+    if (allAtSurface) triggerSurfaceDebrief();
+  }
+
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    bubbles[i].y -= bubbles[i].vy * dt;
+    bubbles[i].x += Math.sin(bubbles[i].y * 0.05) * 0.4;
+    if (bubbles[i].y < SURFACE_Y + 2) bubbles.splice(i, 1);
+  }
+
+  updateHud();
+}
+
+function updateHud() {
+  const d = getPrimarySelectedDiver();
+  const pAbs = 1.0 + 0.1 * d.y;
+  const pO2 = pAbs * d.mix.o2;
+  const pN2 = pAbs * d.mix.n2;
+  const safeGasDepth = getMaxSafeGasDepth(d.mix);
+
+  document.getElementById('diver-title').textContent = d.name;
+  document.getElementById('group-badge').textContent = selectedIds.size > 1 ? `[Група: ${selectedIds.size}]` : '';
+  document.getElementById('val-depth').textContent = `${d.y.toFixed(1)} м / ${pAbs.toFixed(2)} бар`;
+  document.getElementById('val-gases').textContent = `${pO2.toFixed(2)} / ${pN2.toFixed(2)} бар`;
+
+  const towNames = [];
+  if (d.towingContainerId) {
+    const c = world.items.find(it => it.id === d.towingContainerId);
+    if (c) towNames.push(`${c.label} (${c.weight} кг)`);
+  }
+  d.towingDiverIds.forEach(id => {
+    const m = getDiver(id);
+    if (m) towNames.push(m.shortName);
+  });
+  document.getElementById('val-tow').textContent = towNames.length ? towNames.join(', ') : 'Немає';
+
+  const curW = getInventoryWeight(d);
+  document.getElementById('val-weight').textContent = `${curW.toFixed(1)} / ${d.maxCarryWeight.toFixed(1)} кг`;
+  const invList = document.getElementById('inv-list');
+  invList.innerHTML = '';
+  if (d.inventory.length === 0) {
+    invList.innerHTML = '<span style="font-size:10.5px; color:#64748b;">Кишені порожні (підійдіть до приладу і натисніть [E])</span>';
+  } else {
+    d.inventory.forEach(it => {
+      const chip = document.createElement('span');
+      chip.className = 'inv-chip';
+      chip.title = 'Натисніть, щоб випустити предмет';
+      chip.innerHTML = `${it.label} (${it.weight}кг) ✕`;
+      chip.onclick = () => dropInventoryItem(it.id);
+      invList.appendChild(chip);
+    });
+  }
+
+  const purgeRow = document.getElementById('purge-row');
+  if (d.pendingMix) {
+    purgeRow.style.display = 'flex';
+    document.getElementById('val-purge').textContent = `${d.purgeTimer.toFixed(1)} с (${d.pendingMix.name})`;
+  } else {
+    purgeRow.style.display = 'none';
+  }
+
+  const shiftLimitMin = parseFloat(document.getElementById('shift-limit').value);
+  const startHour = 8;
+  const totalClockMin = startHour * 60 + Math.floor(missionStats.shiftElapsedMin);
+  const hh = String(Math.floor(totalClockMin / 60) % 24).padStart(2, '0');
+  const mm = String(totalClockMin % 60).padStart(2, '0');
+
+  const estAscent = estimateAscentAndDecoMinutes(d);
+  const bottomEl = document.getElementById('val-bottom-left');
+
+  if (shiftLimitMin > 0) {
+    const remShift = Math.max(0, shiftLimitMin - missionStats.shiftElapsedMin);
+    const remBottom = remShift - estAscent;
+    document.getElementById('val-shift-clock').textContent = `${hh}:${mm} (залиш. ${Math.ceil(remShift)} хв)`;
+    bottomEl.textContent = `~${Math.ceil(estAscent)} хв / ${remBottom > 0 ? Math.floor(remBottom) + ' хв' : 'ЧАС ВИЙШОВ!'}`;
+    bottomEl.style.color = remBottom <= 2 ? '#ef4444' : remBottom <= 5 ? '#f59e0b' : '#4ade80';
+  } else {
+    document.getElementById('val-shift-clock').textContent = `${hh}:${mm} (вільний графік)`;
+    bottomEl.textContent = `~${Math.ceil(estAscent)} хв / ∞`;
+    bottomEl.style.color = '#38bdf8';
+  }
+
+  const delivered = world.items.filter(it => it.onPlatform).length;
+  document.getElementById('bot-mission').innerHTML = `На платформах: <b>${delivered} / ${world.items.length}</b>`;
+
+  const botCursor = document.getElementById('bot-cursor');
+  if (mouse.inside && mouse.y >= SURFACE_Y) {
+    const cxM = pxToMX(mouse.x);
+    const cyM = pxToMY(mouse.y);
+    const cpBar = 1.0 + 0.1 * cyM;
+    botCursor.innerHTML = `Курсор: <b>X=${cxM.toFixed(1)}м, h=${cyM.toFixed(1)}м (${cpBar.toFixed(2)}б)</b>`;
+  } else {
+    botCursor.innerHTML = `Курсор: <b>поза водою</b>`;
+  }
+  document.getElementById('bot-mod').innerHTML = `Безпечно (O₂/N₂): <b>${safeGasDepth.toFixed(1)} м</b>`;
+
+  const stateEl = document.getElementById('val-state');
+  const alertEl = document.getElementById('gas-alert');
+
+  if (d.status === 'oxtox') {
+    stateEl.textContent = 'Кисневий удар!';
+    stateEl.style.color = '#ef4444';
+    alertEl.textContent = 'УВАГА: P_O₂ > 1.4 бар! Підніміться вище або змініть суміш.';
+  } else if (d.status === 'deco') {
+    stateEl.textContent = 'Порушення стелі!';
+    stateEl.style.color = '#ef4444';
+    alertEl.textContent = `НЕБЕЗПЕКА ДКХ: Опустіться глибше ${d.ceilingDepth.toFixed(1)} м!`;
+  } else if (d.status === 'narcosis') {
+    stateEl.textContent = 'Азотний наркоз';
+    stateEl.style.color = '#c084fc';
+    alertEl.textContent = 'P_N₂ > 3.2 бар: координацію порушено, потрібен Trimix.';
+  } else {
+    stateEl.textContent = 'Норма';
+    stateEl.style.color = '#4ade80';
+    alertEl.textContent = '';
+  }
+
+  const satPercent = Math.min(100, Math.max(0, ((d.tissueN2 - 0.79) / 2.8) * 100));
+  document.getElementById('val-tissue').textContent = Math.round(satPercent) + '%';
+  const barEl = document.getElementById('bar-tissue');
+  barEl.style.width = satPercent + '%';
+  barEl.style.background = satPercent > 75 ? '#ef4444' : satPercent > 45 ? '#f59e0b' : '#38bdf8';
+
+  const ceilEl = document.getElementById('val-ceiling');
+  if (d.ceilingDepth > 0.5) {
+    ceilEl.textContent = d.ceilingDepth.toFixed(1) + ' м (Зупинка)';
+    ceilEl.style.color = d.y < d.ceilingDepth ? '#ef4444' : '#f59e0b';
+  } else {
+    ceilEl.textContent = '0.0 м (Безпечно)';
+    ceilEl.style.color = '#4ade80';
+  }
+}
+
+let lastTime = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  update(dt, now / 1000);
+
+  ctx.fillStyle = '#091926';
+  ctx.fillRect(0, 0, canvas.width, SURFACE_Y);
+
+  const grad = ctx.createLinearGradient(0, SURFACE_Y, 0, canvas.height);
+  grad.addColorStop(0, '#0e4d6e');
+  grad.addColorStop(0.55, '#093149');
+  grad.addColorStop(1, '#041320');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, SURFACE_Y, canvas.width, canvas.height - SURFACE_Y);
+
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let x = 0; x <= canvas.width; x += 20) {
+    const waveY = SURFACE_Y + Math.sin(x * 0.04 + now * 0.003) * 1.8;
+    if (x === 0) ctx.moveTo(x, waveY);
+    else ctx.lineTo(x, waveY);
+  }
+  ctx.stroke();
+
+  drawHexGrid();
+  drawCritters(now / 1000);
+
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  for (let m = 10; m <= 50; m += 10) {
+    const y = mToPxY(m);
+    ctx.fillText(m + 'm', 12, y - 3);
+    ctx.fillRect(0, y, 28, 1);
+  }
+
+  drawPlatforms();
+  drawConsole();
+  drawSalvageItems();
+
+  world.divers.forEach(d => drawUmbilical(d));
+  world.divers.forEach(d => drawDiver(d, now / 1000));
+
+  ctx.strokeStyle = 'rgba(224, 242, 254, 0.7)';
+  ctx.lineWidth = 1;
+  bubbles.forEach(b => {
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke();
+  });
+
+  drawCursorAndSelection();
+
+  requestAnimationFrame(loop);
+}
+
+respawnItems();
+spawnCritters();
+updateSelectionUI();
+logRadio('Джо', 'Група на зв’язку. Можна виділяти всіх рамкою або кнопкою [Всі], прилади збирати в інвентар.');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
